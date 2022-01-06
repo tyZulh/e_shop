@@ -13,22 +13,25 @@ router.post('/', async (req, res) => {
 })
 
 router.post('/:userId/orders', async (req, res) => {
-  console.log(req.params);
   const order = {
     User_id: parseInt(req.params.userId),
     Price: req.body.Price,
     Created_at : new Date()
   }
   const [orderResult] = await mysql.query('INSERT INTO `e-shop`.Order SET ?', [order])
+  
   const orderId = orderResult.insertId
-  const products = req.body.products.map(async (product) => {
+
+  req.body.products.map(async (product) => {
       await mysql.query('INSERT INTO Order_has_Product set ?', [{ ...product, Order_id: orderId }])
     })
-    console.log(products);
-  const [results] = await mysql.query(
-    'SELECT OhP.Order_id, OhP.Product_id, OhP.Quantity  FROM `e-shop`.Order JOIN Order_has_Product as OhP ON OhP.Order_id = ?', [orderId,])
 
-  res.status(200).json(results)
+  const [results] = await mysql.query('SELECT p.id, p.Name, p.Price, p.Description, OhP.Quantity FROM Order_has_Product OhP  JOIN Product p ON OhP.Order_id = ? and OhP.Product_id = p.id', [orderId])
+  
+  order.id = orderId
+  order.products = [...results]
+
+  res.status(200).json(order)
 })
 
 module.exports = router;
